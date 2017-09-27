@@ -28,3 +28,7 @@ with open("kr-vs-kp.data") as file:
 # build chow-liu tree
 CLT = CL.ChowLiuTree(data_train, label)
 print(CLT.accuracy(data_test))
+print(CLT.label_margin)
+print(CLT.lb_nb_pair_margin)
+print(CLT.tree)
+print(CLT.degree)

@@ -13,7 +13,7 @@ class ChowLiuTree:
         self.lb_nb_pair_margin = {}
         self.tree = self.build_chow_liu_tree(len(self.X[0]))
         self.degree = self.tree.degree(label)
-        self.extract_classifier()
+        self.extract_neighbors()
 
     def marginal_distribution(self, u):
         """
@@ -74,7 +74,7 @@ class ChowLiuTree:
         tree = nx.minimum_spanning_tree(G)  # (G, weight='weight', algorithm='kruskal',ignore_nan=False)
         return tree
 
-    def extract_classifier(self):
+    def extract_neighbors(self):
         """
         Return the useful information from the tree that could be used as a classifier for lth feature.
         (the label) i.e. all the neighbours of label node.
@@ -85,7 +85,7 @@ class ChowLiuTree:
     def classify(self, vector):
         values = defaultdict(float)
         for lb, prob in self.label_margin.items():
-            likely = prob ** (self.degree - 1)
+            likely = 1/(prob ** (self.degree - 1))
             for nb, dist in self.lb_nb_pair_margin.items():
                 likely *= dist[vector[nb], lb]
             values[lb] = likely
