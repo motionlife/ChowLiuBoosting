@@ -1,0 +1,12 @@
+The accuracy for up to 1 round is: 0.9511400651465798
+The accuracy for up to 2 round is: 0.8599348534201955
+The accuracy for up to 3 round is: 0.9609120521172638
+The accuracy for up to 4 round is: 0.9120521172638436
+The accuracy for up to 5 round is: 0.9641693811074918
+The accuracy for up to 6 round is: 0.9218241042345277
+The accuracy for up to 7 round is: 0.9641693811074918
+The accuracy for up to 8 round is: 0.9218241042345277
+The accuracy for up to 9 round is: 0.9641693811074918
+The accuracy for up to 10 round is: 0.9218241042345277
+The accuracy for up to 11 round is: 0.9641693811074918
+The accuracy for up to 12 round is: 0.9218241042345277
