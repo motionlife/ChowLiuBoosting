@@ -25,10 +25,10 @@ with open("data/chess/kr-vs-kp.data") as file:
 
 # get the size of the data-set
 label = 36
+K = 2
 n = len(data)
 M = 300
 W = [1. / n] * n
-K = 2
 C = {}
 Error = []
 
@@ -59,10 +59,10 @@ for m in range(M):
             W[i] = W[i] / (K * (1 - e))
     benchmark(data, C)
 
+print("The running time is: ", time.time() - start_time)
 fig = plt.figure()
 plt.plot(Error)
 fig.suptitle("CHESS")
 plt.ylabel('Training Error')
 plt.xlabel("Boosting Round")
 plt.show()
-print("The running time is: ", time.time() - start_time)
