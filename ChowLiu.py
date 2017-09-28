@@ -1,19 +1,23 @@
 """
 The implementation of Chow-Liu Tree algorithm for Categorical distribution
 """
-import numpy as N, networkx as nx
 from collections import defaultdict
+
+import networkx as nx
+import numpy as Num
 
 
 class ChowLiuTree:
-    def __init__(self, data, label):
+    def __init__(self, data, label, weight):
         self.X = data
         self.label = label
-        self.label_margin = {}
+        self.weight = weight
+        self.lb_margin = {}
         self.lb_nb_pair_margin = {}
         self.tree = self.build_chow_liu_tree(len(self.X[0]))
-        self.degree = self.tree.degree(label)
+        self.lb_degree = self.tree.degree(label)
         self.extract_neighbors()
+        self.cache = [1] * len(data)
 
     def marginal_distribution(self, u):
         """
@@ -21,10 +25,10 @@ class ChowLiuTree:
         """
         values = defaultdict(float)
         s = 1. / len(self.X)
-        for x in self.X:
-            values[x[u]] += s
+        for i, x in enumerate(self.X):
+            values[x[u]] += s * self.weight[i]
         if u == self.label:
-            self.label_margin = values
+            self.lb_margin = values
         return values
 
     def marginal_pair_distribution(self, u, v):
@@ -35,9 +39,8 @@ class ChowLiuTree:
             u, v = v, u
         values = defaultdict(float)
         s = 1. / len(self.X)
-        for x in self.X:
-            values[(x[u], x[v])] += s
-
+        for i, x in enumerate(self.X):
+            values[(x[u], x[v])] += s * self.weight[i]
         if v == self.label:
             self.lb_nb_pair_margin[u] = values
         return values
@@ -57,7 +60,7 @@ class ChowLiuTree:
             for x_v, p_x_v in marginal_v.items():
                 if (x_u, x_v) in marginal_uv:
                     p_x_uv = marginal_uv[(x_u, x_v)]
-                    info += p_x_uv * (N.log(p_x_uv) - N.log(p_x_u) - N.log(p_x_v))
+                    info += p_x_uv * (Num.log(p_x_uv) - Num.log(p_x_u) - Num.log(p_x_v))
         return info
 
     def build_chow_liu_tree(self, n):
@@ -82,21 +85,25 @@ class ChowLiuTree:
         neighbors = self.tree.neighbors(self.label)
         self.lb_nb_pair_margin = {k: self.lb_nb_pair_margin[k] for k in neighbors}
 
-    def classify(self, vector):
-        values = defaultdict(float)
-        for lb, prob in self.label_margin.items():
-            likely = 1/(prob ** (self.degree - 1))
-            for nb, dist in self.lb_nb_pair_margin.items():
-                likely *= dist[vector[nb], lb]
-            values[lb] = likely
-        return max(values, key=values.get)
+    def error_rate(self):
+        err = 0.
+        for i, x in enumerate(self.X):
+            if x[self.label] != predict_label(x, self):
+                err += self.weight[i]
+                self.cache[i] = 0
+        return err
 
-    def accuracy(self, test_set):
-        correct = 0.
-        for x in test_set:
-            if x[self.label] == self.classify(x):
-                correct += 1
-        return correct / len(self.X)
+
+def predict_label(vector, cl=None, pack=None):
+    if pack is None:
+        pack = [cl.lb_degree, cl.lb_margin, cl.lb_nb_pair_margin]
+    values = defaultdict(float)
+    for lb, prob in pack[1].items():
+        likely = 1 / (prob ** (pack[0] - 1))
+        for nb, dist in pack[2].items():
+            likely *= dist[vector[nb], lb]
+        values[lb] = likely
+    return max(values, key=values.get)
 
 
 if '__main__' == __name__:
