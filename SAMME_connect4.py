@@ -27,9 +27,9 @@ with open("data/connect-4/connect-4.data") as file:
 label = 42
 K = 3
 n = len(data)
-M = 300
+M = 900
 W = [1. / n] * n
-C = {}
+C = []
 Error = []
 
 
@@ -37,33 +37,33 @@ def benchmark(t_data, C):
     correct = 0.
     scores = defaultdict(float)
     for d in t_data:
-        for k, v in C.items():
-            scores[CL.predict_label(d, None, v)] += v[-1]
+        for model in C:
+            scores[CL.predict_label(d, None, model)] += model[-1]
         if d[label] == max(scores, key=scores.get):
             correct += 1
         scores.clear()
     correct /= len(t_data)
     Error.append(1 - correct)
     print("The accuracy for up to", len(C), "round is:", correct)
+    return correct
 
 
 for m in range(M):
-    CLT = CL.ChowLiuTree(data, label, W)
-    C[m] = [CLT.lb_degree, CLT.lb_margin, CLT.lb_nb_pair_margin]
-    e = CLT.error_rate()
+    # CLT = CL.ChowLiuTree(data, label, W)
+    CLT = CL.RandomNaiveBayes(data, label, W, 10)
+    C.append([CLT.lb_degree, CLT.lb_margin, CLT.lb_nb_pair_margin])
+    e = CLT.error
     C[m].append(math.log((1 / e - 1) * (K - 1)))
     for i in range(n):
-        if CLT.cache[i] == 0:
-            W[i] = W[i] * (K - 1) / (K * e)
-        else:
-            W[i] = W[i] / (K * (1 - e))
-    benchmark(data, C)
+        W[i] = W[i] * (K - 1) / (K * e) if CLT.cache[i] == 0 else W[i] / (K * (1 - e))
+    if benchmark(data, C) == 1:
+        break
 
 print("The running time is: ", time.time() - start_time)
 
 fig = plt.figure()
 plt.plot(Error)
-fig.suptitle("Connect-4 Opening Database")
+fig.suptitle("Connect-4 Opening Database-Random Tree")
 plt.ylabel('Training Error')
 plt.xlabel("Boosting Round")
 plt.show()

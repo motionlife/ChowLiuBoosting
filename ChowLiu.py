@@ -5,6 +5,8 @@ from collections import defaultdict
 
 import networkx as nx
 import numpy as Num
+import random
+import copy
 
 
 class ChowLiuTree:
@@ -12,6 +14,7 @@ class ChowLiuTree:
         self.X = data
         self.label = label
         self.weight = weight
+        self.scale = [i / len(data) for i in weight]
         self.lb_margin = {}
         self.lb_nb_pair_margin = {}
         self.tree = self.build_chow_liu_tree(len(self.X[0]))
@@ -24,9 +27,8 @@ class ChowLiuTree:
         Return the marginal distribution for the u'th features of the data points, X.
         """
         values = defaultdict(float)
-        s = 1. / len(self.X)
         for i, x in enumerate(self.X):
-            values[x[u]] += s * self.weight[i]
+            values[x[u]] += self.scale[i]
         if u == self.label:
             self.lb_margin = values
         return values
@@ -38,9 +40,8 @@ class ChowLiuTree:
         if u > v:
             u, v = v, u
         values = defaultdict(float)
-        s = 1. / len(self.X)
         for i, x in enumerate(self.X):
-            values[(x[u], x[v])] += s * self.weight[i]
+            values[(x[u], x[v])] += self.scale[i]
         if v == self.label:
             self.lb_nb_pair_margin[u] = values
         return values
@@ -94,13 +95,96 @@ class ChowLiuTree:
         return err
 
 
-def predict_label(vector, cl=None, pack=None):
-    if pack is None:
-        pack = [cl.lb_degree, cl.lb_margin, cl.lb_nb_pair_margin]
+class RandomNaiveBayes:
+    def __init__(self, data, label, weight, degree, rdc):
+        self.X = data
+        self.label = label
+        self.weight = weight
+        self.scale = [i / len(data) for i in weight]
+        self.lb_degree = degree
+        self.rdc = rdc
+        self.lb_margin = self.root_margin()
+        self.lb_nb_pair_margin = {}
+        self.pair_margin_cache = {}
+        self.cache = []
+        self.error = self.get_lowest_error()
+
+    def root_margin(self):
+        values = defaultdict(float)
+        for i, x in enumerate(self.X):
+            values[x[self.label]] += self.scale[i]
+        return values
+
+    def add_pair_margin(self, node):
+        if node in self.pair_margin_cache:
+            return self.pair_margin_cache.get(node)
+        values = defaultdict(float)
+        for i, x in enumerate(self.X):
+            values[(x[node], x[self.label])] += self.scale[i]
+        self.pair_margin_cache[node] = values
+        return values
+
+    def get_lowest_error(self):
+        lowest = 1.
+        for j in range(self.rdc):
+            err = 0.
+            temp = [1] * len(self.X)
+            td = {}
+            for node in random.sample(range(self.label), self.lb_degree):
+                td[node] = self.add_pair_margin(node)
+            for i, x in enumerate(self.X):
+                if x[self.label] != predict_label(x, None, [self.lb_degree, self.lb_margin, td]):
+                    err += self.weight[i]
+                    temp[i] = 0
+            if err < lowest:
+                lowest = err
+                self.cache = copy.copy(temp)
+                self.lb_nb_pair_margin = copy.deepcopy(td)
+        return lowest
+
+
+class RandomTree:
+    def __init__(self, data, label, weight, degree):
+        self.X = data
+        self.label = label
+        self.weight = weight
+        self.scale = [i / len(data) for i in weight]
+        self.lb_margin = self.root_margin()
+        self.lb_nb_pair_margin = self.pair_margin(random.sample(range(label), degree))
+        self.lb_degree = degree
+        self.cache = [1] * len(data)
+
+    def root_margin(self):
+        values = defaultdict(float)
+        for i, x in enumerate(self.X):
+            values[x[self.label]] += self.scale[i]
+        return values
+
+    def pair_margin(self, nodes):
+        margins = {}
+        values = defaultdict(float)
+        for node in nodes:
+            for i, x in enumerate(self.X):
+                values[(x[node], x[self.label])] += self.scale[i]
+            margins[node] = values
+        return margins
+
+    def error_rate(self):
+        err = 0.
+        for i, x in enumerate(self.X):
+            if x[self.label] != predict_label(x, self):
+                err += self.weight[i]
+                self.cache[i] = 0
+        return err
+
+
+def predict_label(vector, cl=None, model=None):
+    if model is None:
+        model = [cl.lb_degree, cl.lb_margin, cl.lb_nb_pair_margin]
     values = defaultdict(float)
-    for lb, prob in pack[1].items():
-        likely = 1 / (prob ** (pack[0] - 1))
-        for nb, dist in pack[2].items():
+    for lb, prob in model[1].items():
+        likely = 1 / (prob ** (model[0] - 1))
+        for nb, dist in model[2].items():
             likely *= dist[vector[nb], lb]
         values[lb] = likely
     return max(values, key=values.get)
