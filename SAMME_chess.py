@@ -49,11 +49,9 @@ def benchmark(t_data, C):
 
 
 for m in range(M):
-    CLT = CL.RandomNaiveBayes(data, label, W, 3, 1)
-    C.append([CLT.lb_degree, CLT.lb_margin, CLT.lb_nb_pair_margin])
-    # e = CLT.error_rate()
-    e = CLT.error
-    C[m].append(math.log((1 / e - 1) * (K - 1)))
+    CLT = CL.ChowLiuTree(data, label, W)
+    e = CLT.error_rate()
+    C.append([CLT.lb_degree, CLT.lb_margin, CLT.lb_nb_pair_margin,math.log((1 / e - 1) * (K - 1))])
     for i in range(n):
         W[i] = W[i] * (K - 1) / (K * e) if CLT.cache[i] == 0 else W[i] / (K * (1 - e))
     if benchmark(data, C) == 1:

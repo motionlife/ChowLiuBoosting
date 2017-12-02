@@ -20,31 +20,48 @@ mndata = MNIST('data/MNIST')
 training = mndata.load_training()
 testing = mndata.load_testing()
 
-for i, img in enumerate(training[0]):
-    img.append(training[1][i])
-train = training[0]
+# get the size of the data-set
 
+train = []
+for i, img in enumerate(training[0]):
+    temp0 = [0] * 28 * 7
+    for j, scale in enumerate(img):
+        temp0[j // 4] += scale
+    temp1 = [0] * 7 * 7
+    for j, scale in enumerate(temp0):
+        temp1[(j // 28) * 7 + j % 7] += scale
+    temp1[:] = [x // 40 for x in temp1]
+    temp1.append(training[1][i])
+    train.append(temp1)
+
+test = []
 for i, img in enumerate(testing[0]):
-    img.append(testing[1][i])
-test = testing[0]
+    temp0 = [0] * 28 * 7
+    for j, scale in enumerate(img):
+        temp0[j // 4] += scale
+    temp1 = [0] * 7 * 7
+    for j, scale in enumerate(temp0):
+        temp1[(j // 28) * 7 + j % 7] += scale
+    temp1[:] = [x // 40 for x in temp1]
+    temp1.append(testing[1][i])
+    test.append(temp1)
 
 # get the size of the data-set
-label = 784
+label = 49
 K = 10
 n = len(train)
-M = 700
+M = 500
 W = [1. / n] * n
 C = []
 Error = []
 
 for m in range(M):
-    CLT = CL.RandomNaiveBayes(train, label, W, 3, 7)
-    C.append([CLT.lb_degree, CLT.lb_margin, CLT.lb_nb_pair_margin])
-    e = CLT.error
-    C[m].append(math.log((1 / e - 1) * (K - 1)))
+    CLT = CL.ChowLiuTree(train, label, W)
+    e = CLT.error_rate()
+    C.append([CLT.lb_degree, CLT.lb_margin, CLT.lb_nb_pair_margin, math.log((1 / e - 1) * (K - 1))])
     for i in range(n):
         W[i] = W[i] * (K - 1) / (K * e) if CLT.cache[i] == 0 else W[i] / (K * (1 - e))
-    print("Boosting",i,"round compeleted")
+    print("Boosting", m, "round completed, e =", e)
 
 # Bench mark the last 10 rounds
 for i in reversed(range(10)):

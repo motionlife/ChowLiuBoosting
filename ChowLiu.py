@@ -103,25 +103,21 @@ class RandomNaiveBayes:
         self.scale = [i / len(data) for i in weight]
         self.lb_degree = degree
         self.rdc = rdc
-        self.lb_margin = self.root_margin()
+        self.lb_margin = self.node_margin(self.label)
         self.lb_nb_pair_margin = {}
-        self.pair_margin_cache = {}
         self.cache = []
         self.error = self.get_lowest_error()
 
-    def root_margin(self):
+    def node_margin(self, node):
         values = defaultdict(float)
         for i, x in enumerate(self.X):
-            values[x[self.label]] += self.scale[i]
+            values[x[node]] += self.scale[i]
         return values
 
-    def add_pair_margin(self, node):
-        if node in self.pair_margin_cache:
-            return self.pair_margin_cache.get(node)
+    def pair_margin(self, node):
         values = defaultdict(float)
         for i, x in enumerate(self.X):
             values[(x[node], x[self.label])] += self.scale[i]
-        self.pair_margin_cache[node] = values
         return values
 
     def get_lowest_error(self):
@@ -131,7 +127,7 @@ class RandomNaiveBayes:
             temp = [1] * len(self.X)
             td = {}
             for node in random.sample(range(self.label), self.lb_degree):
-                td[node] = self.add_pair_margin(node)
+                td[node] = self.pair_margin(node)
             for i, x in enumerate(self.X):
                 if x[self.label] != predict_label(x, None, [self.lb_degree, self.lb_margin, td]):
                     err += self.weight[i]
@@ -139,7 +135,8 @@ class RandomNaiveBayes:
             if err < lowest:
                 lowest = err
                 self.cache = copy.copy(temp)
-                self.lb_nb_pair_margin = copy.deepcopy(td)
+                # no need to use deep copy
+                self.lb_nb_pair_margin = copy.copy(td)
         return lowest
 
 
@@ -149,24 +146,23 @@ class RandomTree:
         self.label = label
         self.weight = weight
         self.scale = [i / len(data) for i in weight]
-        self.lb_margin = self.root_margin()
+        self.lb_margin = self.node_margin(self.label)
         self.lb_nb_pair_margin = self.pair_margin(random.sample(range(label), degree))
         self.lb_degree = degree
         self.cache = [1] * len(data)
 
-    def root_margin(self):
+    def node_margin(self, node):
         values = defaultdict(float)
         for i, x in enumerate(self.X):
-            values[x[self.label]] += self.scale[i]
+            values[x[node]] += self.scale[i]
         return values
 
     def pair_margin(self, nodes):
         margins = {}
-        values = defaultdict(float)
         for node in nodes:
+            margins[node] = defaultdict(float)
             for i, x in enumerate(self.X):
-                values[(x[node], x[self.label])] += self.scale[i]
-            margins[node] = values
+                margins[node][(x[node], x[self.label])] += self.scale[i]
         return margins
 
     def error_rate(self):
@@ -178,15 +174,18 @@ class RandomTree:
         return err
 
 
-def predict_label(vector, cl=None, model=None):
+def predict_label(x, cl=None, model=None):
     if model is None:
         model = [cl.lb_degree, cl.lb_margin, cl.lb_nb_pair_margin]
     values = defaultdict(float)
-    for lb, prob in model[1].items():
-        likely = 1 / (prob ** (model[0] - 1))
-        for nb, dist in model[2].items():
-            likely *= dist[vector[nb], lb]
-        values[lb] = likely
+    for lb, pr in model[1].items():
+        likelihood = (1 - model[0]) * Num.log(pr)
+        for k, values in model[2].items():
+            p = values[(x[k], lb)]
+            if p == 0:
+                continue
+            likelihood += Num.log(p)
+        values[lb] = likelihood
     return max(values, key=values.get)
 
 
