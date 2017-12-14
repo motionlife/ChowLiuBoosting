@@ -36,23 +36,22 @@ Error = []
 
 def benchmark(t_data, C):
     correct = 0.
-    scores = defaultdict(float)
     for d in t_data:
+        scores = defaultdict(float)
         for model in C:
-            scores[CL.predict_label(d, None, model)] += model[-1]
+            scores[CL.predict_label(d, model[0])] += model[1]
         if d[label] == max(scores, key=scores.get):
             correct += 1
-        scores.clear()
-    correct /= len(t_data)
+    correct = correct / len(data)
     Error.append(1 - correct)
     print("The accuracy for up to", len(C), "round is:", correct)
     return correct
 
 
 for m in range(M):
-    CLT = CL.ChowLiuTree(data, label, W)
+    CLT = CL.ChowLiuTree(data, label, W, 10 / (n + 10))
     e = CLT.error_rate()
-    C.append([CLT.lb_degree, CLT.lb_margin, CLT.lb_nb_pair_margin, math.log((1 / e - 1) * (K - 1))])
+    C.append([CLT, math.log((1 / e - 1) * (K - 1))])
     for i in range(n):
         W[i] = W[i] * (K - 1) / (K * e) if CLT.cache[i] == 0 else W[i] / (K * (1 - e))
     if benchmark(data, C) == 1:

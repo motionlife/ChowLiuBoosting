@@ -56,7 +56,7 @@ def benchmark(data, models):
 
 for m in range(M):
     CLT = CL.RandomTree(train, label, W, label)
-    e = CLT.error_rate()
+    e = CLT.error
     C.append([CLT.lb_degree, CLT.lb_margin, CLT.lb_nb_pair_margin, math.log((1 / e - 1) * (K - 1))])
     for i in range(n):
         W[i] = W[i] * (K - 1) / (K * e) if CLT.cache[i] == 0 else W[i] / (K * (1 - e))

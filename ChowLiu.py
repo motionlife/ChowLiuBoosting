@@ -10,17 +10,17 @@ import copy
 
 
 class ChowLiuTree:
-    def __init__(self, data, label, weight):
+    def __init__(self, data, label, weight, aosmooth):
         self.X = data
         self.label = label
         self.weight = weight
-        self.scale = [i / len(data) for i in weight]
         self.lb_margin = {}
         self.lb_nb_pair_margin = {}
         self.tree = self.build_chow_liu_tree(len(self.X[0]))
         self.lb_degree = self.tree.degree(label)
         self.extract_neighbors()
         self.cache = [1] * len(data)
+        self.aosmooth = aosmooth
 
     def marginal_distribution(self, u):
         """
@@ -28,7 +28,7 @@ class ChowLiuTree:
         """
         values = defaultdict(float)
         for i, x in enumerate(self.X):
-            values[x[u]] += self.scale[i]
+            values[x[u]] += self.weight[i]
         if u == self.label:
             self.lb_margin = values
         return values
@@ -41,7 +41,7 @@ class ChowLiuTree:
             u, v = v, u
         values = defaultdict(float)
         for i, x in enumerate(self.X):
-            values[(x[u], x[v])] += self.scale[i]
+            values[(x[u], x[v])] += self.weight[i]
         if v == self.label:
             self.lb_nb_pair_margin[u] = values
         return values
@@ -100,7 +100,6 @@ class RandomNaiveBayes:
         self.X = data
         self.label = label
         self.weight = weight
-        self.scale = [i / len(data) for i in weight]
         self.lb_degree = degree
         self.rdc = rdc
         self.lb_margin = self.node_margin(self.label)
@@ -111,13 +110,13 @@ class RandomNaiveBayes:
     def node_margin(self, node):
         values = defaultdict(float)
         for i, x in enumerate(self.X):
-            values[x[node]] += self.scale[i]
+            values[x[node]] += self.weight[i]
         return values
 
     def pair_margin(self, node):
         values = defaultdict(float)
         for i, x in enumerate(self.X):
-            values[(x[node], x[self.label])] += self.scale[i]
+            values[(x[node], x[self.label])] += self.weight[i]
         return values
 
     def get_lowest_error(self):
@@ -145,16 +144,16 @@ class RandomTree:
         self.X = data
         self.label = label
         self.weight = weight
-        self.scale = [i / len(data) for i in weight]
         self.lb_margin = self.node_margin(self.label)
         self.lb_nb_pair_margin = self.pair_margin(random.sample(range(label), degree))
         self.lb_degree = degree
         self.cache = [1] * len(data)
+        self.error = self.error_rate()
 
     def node_margin(self, node):
         values = defaultdict(float)
         for i, x in enumerate(self.X):
-            values[x[node]] += self.scale[i]
+            values[x[node]] += self.weight[i]
         return values
 
     def pair_margin(self, nodes):
@@ -162,7 +161,7 @@ class RandomTree:
         for node in nodes:
             margins[node] = defaultdict(float)
             for i, x in enumerate(self.X):
-                margins[node][(x[node], x[self.label])] += self.scale[i]
+                margins[node][(x[node], x[self.label])] += self.weight[i]
         return margins
 
     def error_rate(self):
@@ -176,17 +175,16 @@ class RandomTree:
 
 def predict_label(x, cl=None, model=None):
     if model is None:
-        model = [cl.lb_degree, cl.lb_margin, cl.lb_nb_pair_margin]
-    values = defaultdict(float)
+        model = [cl.lb_degree, cl.lb_margin, cl.lb_nb_pair_margin, cl.aosmooth]
+    result = {}
     for lb, pr in model[1].items():
         likelihood = (1 - model[0]) * Num.log(pr)
         for k, values in model[2].items():
+            # smoothing- add-one smoothing
             p = values[(x[k], lb)]
-            if p == 0:
-                continue
-            likelihood += Num.log(p)
-        values[lb] = likelihood
-    return max(values, key=values.get)
+            likelihood += (Num.log(model[-1]) if p == 0 else Num.log(p))
+        result[lb] = likelihood
+    return max(result, key=result.get)
 
 
 if '__main__' == __name__:
