@@ -50,7 +50,11 @@ def benchmark(data, models):
             correct += 1
     correct = correct / len(data)
     Error.append(1 - correct)
-    print("7-7 Random Boosting Round: ", len(models), " Accuracy:", correct)
+    log = "7-7 Random Boosting Round: " + str(len(models)) + " Accuracy:" + str(correct)
+    f = open('results/random7-7.txt', 'a')
+    f.write('\n' + log)
+    f.close()
+    print(log)
     return correct
 
 

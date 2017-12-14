@@ -52,7 +52,11 @@ def benchmark(data, models):
             correct += 1
     correct = correct / len(data)
     Error.append(1 - correct)
-    print("ALL-NODES-Boosting Round: ", len(models), " Accuracy:", correct)
+    log = "NB Boosting Round: " + str(len(models)) + " Accuracy:" + str(correct)
+    f = open('results/mnist-full-nb.txt', 'a')
+    f.write('\n' + log)
+    f.close()
+    print(log)
     return correct
 
 

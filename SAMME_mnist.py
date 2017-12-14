@@ -20,12 +20,10 @@ mndata = MNIST('data/MNIST')
 training = mndata.load_training()
 testing = mndata.load_testing()
 
-
 for i, img in enumerate(training[0]):
     img[:] = [1 if x > 7 else 0 for x in img]
     img.append(training[1][i])
 train = training[0]
-
 
 for i, img in enumerate(testing[0]):
     img[:] = [1 if x > 7 else 0 for x in img]
@@ -52,7 +50,11 @@ def benchmark(data, models):
             correct += 1
     correct = correct / len(data)
     Error.append(1 - correct)
-    print("Chow-liu Boosting Round: ", len(models), " Accuracy:", correct)
+    log = "ChowLiu Boosting Round: " + str(len(models)) + " Accuracy:" + str(correct)
+    f = open('results/mnist-ChowLiuTree.txt', 'a')
+    f.write('\n' + log)
+    f.close()
+    print(log)
     return correct
 
 
