@@ -20,32 +20,18 @@ mndata = MNIST('data/MNIST')
 training = mndata.load_training()
 testing = mndata.load_testing()
 
-train = []
 for i, img in enumerate(training[0]):
-    temp0 = [0] * 28 * 7
-    for j, scale in enumerate(img):
-        temp0[j // 4] += scale
-    temp1 = [0] * 7 * 7
-    for j, scale in enumerate(temp0):
-        temp1[(j // 28) * 7 + j % 7] += scale
-    # temp1[:] = [x // 160 for x in temp1]
-    temp1.append(training[1][i])
-    train.append(temp1)
+    img[:] = [1 if x > 7 else 0 for x in img]
+    img.append(training[1][i])
+train = training[0]
 
-test = []
 for i, img in enumerate(testing[0]):
-    temp0 = [0] * 28 * 7
-    for j, scale in enumerate(img):
-        temp0[j // 4] += scale
-    temp1 = [0] * 7 * 7
-    for j, scale in enumerate(temp0):
-        temp1[(j // 28) * 7 + j % 7] += scale
-    # temp1[:] = [x // 160 for x in temp1]
-    temp1.append(testing[1][i])
-    test.append(temp1)
+    img[:] = [1 if x > 7 else 0 for x in img]
+    img.append(testing[1][i])
+test = testing[0]
 
 # get the size of the data-set
-label = 7 * 7
+label = 784
 K = 10
 n = len(train)
 M = 500
@@ -56,26 +42,24 @@ Error = []
 
 def benchmark(data, models):
     correct = 0.
-    votes = defaultdict(float)
     for d in data:
+        votes = defaultdict(float)
         for model in models:
-            votes[CL.predict_label(d, None, model)] += model[-1]
+            votes[CL.predict_label(d, model[0])] += model[1]
         if d[label] == max(votes, key=votes.get):
             correct += 1
-        votes.clear()
-    correct /= len(data)
+    correct = correct / len(data)
     Error.append(1 - correct)
-    print("The accuracy for up to", len(models), "rounds is:", correct)
+    print("7-7 Random Boosting Round: ", len(models), " Accuracy:", correct)
     return correct
 
 
 for m in range(M):
-    CLT = CL.ChowLiuTree(train, label, W)
-    e = CLT.error_rate()
-    C.append([CLT.lb_degree, CLT.lb_margin, CLT.lb_nb_pair_margin, math.log((1 / e - 1) * (K - 1))])
+    CLT = CL.RandomNaiveBayes(train, label, W, 7, 7)
+    e = CLT.error
+    C.append([CLT, math.log((1 / e - 1) * (K - 1))])
     for i in range(n):
         W[i] = W[i] * (K - 1) / (K * e) if CLT.cache[i] == 0 else W[i] / (K * (1 - e))
-    print("Boosting", m, "round completed, e =", e)
     if benchmark(test, C) == 1:
         break
 

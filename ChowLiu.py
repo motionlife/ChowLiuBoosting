@@ -10,7 +10,7 @@ import copy
 
 
 class ChowLiuTree:
-    def __init__(self, data, label, weight, aosmooth):
+    def __init__(self, data, label, weight):
         self.X = data
         self.label = label
         self.weight = weight
@@ -20,7 +20,7 @@ class ChowLiuTree:
         self.lb_degree = self.tree.degree(label)
         self.extract_neighbors()
         self.cache = [1] * len(data)
-        self.aosmooth = aosmooth
+        self.error = self.error_rate()
 
     def marginal_distribution(self, u):
         """
@@ -128,7 +128,7 @@ class RandomNaiveBayes:
             for node in random.sample(range(self.label), self.lb_degree):
                 td[node] = self.pair_margin(node)
             for i, x in enumerate(self.X):
-                if x[self.label] != predict_label(x, None, [self.lb_degree, self.lb_margin, td]):
+                if x[self.label] != predict_label(x, None, [self.lb_degree, self.lb_margin, td, len(self.X)]):
                     err += self.weight[i]
                     temp[i] = 0
             if err < lowest:
@@ -175,14 +175,15 @@ class RandomTree:
 
 def predict_label(x, cl=None, model=None):
     if model is None:
-        model = [cl.lb_degree, cl.lb_margin, cl.lb_nb_pair_margin, cl.aosmooth]
+        model = [cl.lb_degree, cl.lb_margin, cl.lb_nb_pair_margin, len(cl.X)]
     result = {}
     for lb, pr in model[1].items():
         likelihood = (1 - model[0]) * Num.log(pr)
         for k, values in model[2].items():
             # smoothing- add-one smoothing
+            ad = len(values)
             p = values[(x[k], lb)]
-            likelihood += (Num.log(model[-1]) if p == 0 else Num.log(p))
+            likelihood += (Num.log(ad / (model[-1] + ad)) if p == 0 else Num.log(p))
         result[lb] = likelihood
     return max(result, key=result.get)
 

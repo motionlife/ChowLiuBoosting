@@ -20,13 +20,15 @@ mndata = MNIST('data/MNIST')
 training = mndata.load_training()
 testing = mndata.load_testing()
 
+
 for i, img in enumerate(training[0]):
-    img[:] = [x // 16 for x in img]
+    img[:] = [1 if x > 7 else 0 for x in img]
     img.append(training[1][i])
 train = training[0]
 
+
 for i, img in enumerate(testing[0]):
-    img[:] = [x // 16 for x in img]
+    img[:] = [1 if x > 7 else 0 for x in img]
     img.append(testing[1][i])
 test = testing[0]
 
@@ -45,7 +47,7 @@ def benchmark(data, models):
     for d in data:
         votes = defaultdict(float)
         for model in models:
-            votes[CL.predict_label(d, None, model)] += model[-1]
+            votes[CL.predict_label(d, model[0])] += model[1]
         if d[label] == max(votes, key=votes.get):
             correct += 1
     correct = correct / len(data)
@@ -57,10 +59,10 @@ def benchmark(data, models):
 for m in range(M):
     CLT = CL.RandomTree(train, label, W, label)
     e = CLT.error
-    C.append([CLT.lb_degree, CLT.lb_margin, CLT.lb_nb_pair_margin, math.log((1 / e - 1) * (K - 1))])
+    C.append([CLT, math.log((1 / e - 1) * (K - 1))])
     for i in range(n):
         W[i] = W[i] * (K - 1) / (K * e) if CLT.cache[i] == 0 else W[i] / (K * (1 - e))
-    if benchmark(train, C) == 1:
+    if benchmark(test, C) == 1:
         break
 
 print("The running time is: ", time.time() - start_time)
