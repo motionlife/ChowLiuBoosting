@@ -75,7 +75,8 @@ class ChowLiuTree:
             G.add_node(v)
             for u in range(v):
                 G.add_edge(u, v, weight=-self.calculate_mutual_information(u, v))
-        tree = nx.minimum_spanning_tree(G)  # (G, weight='weight', algorithm='kruskal',ignore_nan=False)
+        tree = nx.minimum_spanning_tree(G, 'weight',
+                                        'prim')  # (G, weight='weight', algorithm='kruskal',ignore_nan=False)
         return tree
 
     def extract_neighbors(self):
